@@ -2,23 +2,23 @@ import os
 
 from dotenv import load_dotenv
 from telegram import Update
-from telegram.ext import Application as Bot
+from telegram.ext import Application as TelegramApp
 from telegram.ext import CommandHandler, ContextTypes
 
 load_dotenv()
 
 
-async def create_bot() -> Bot:
+
+async def create_telegram_app() -> TelegramApp:
     """Create and configure the bot application."""
-    bot = (
-        Bot.builder()
+    app = (
+        TelegramApp.builder()
         .token(str(os.getenv("TELEGRAM_BOT_TOKEN")))
-        .updater(None)  # no updater needed for webhook
         .build()
     )
-    bot.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("start", start))
 
-    return bot
+    return app
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

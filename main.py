@@ -1,10 +1,11 @@
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from telegram.ext import Application as TelegramApp
 
-from bot import create_bot
+from bot import create_telegram_app
 
 load_dotenv()
 
@@ -13,10 +14,11 @@ telegram_app: TelegramApp
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Manage application lifespan for bot initialization and cleanup."""
     global telegram_app
-    telegram_app = await create_bot()
+    telegram_app = await create_telegram_app()
     yield
 
 fastapi_app.router.lifespan_context = lifespan
+
