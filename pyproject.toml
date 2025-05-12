@@ -5,7 +5,9 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "fastapi>=0.121.1",
     "ffmpeg-python>=0.2.0",
+    "grog>=0.93",
     "python-dotenv>=1.2.1",
     "python-telegram-bot>=22.5",
 ]
