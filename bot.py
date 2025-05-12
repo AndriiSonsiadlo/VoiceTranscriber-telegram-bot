@@ -8,7 +8,7 @@ from telegram.ext import CommandHandler, ContextTypes
 load_dotenv()
 
 
-def create_bot() -> Bot:
+async def create_bot() -> Bot:
     """Create and configure the bot application."""
     bot = (
         Bot.builder()
@@ -30,4 +30,4 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
 
 
-application: Bot = create_bot()
+
