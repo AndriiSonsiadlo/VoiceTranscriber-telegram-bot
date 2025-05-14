@@ -41,6 +41,11 @@ async def webhook(request: Request):
 @fastapi_app.get("/api/set_webhook")
 async def set_webhook():
     """Endpoint to set up the webhook."""
+    global telegram_app
+
+    if telegram_app is None:
+        telegram_app = await create_telegram_app()
+
     webhook_url = os.getenv("WEBHOOK_URL")
     if not webhook_url:
         return {"error": "WEBHOOK_URL environment variable not set"}
