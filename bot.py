@@ -71,7 +71,7 @@ async def transcribe_audio(file_path: str) -> Transcription:
     """Transcribe audio using Whisper via Groq API."""
     with open(file_path, "rb") as audio_file:
         completion = groq_client.audio.transcriptions.create(
-            model="whisper-1",
+            model="whisper-large-v3-turbo",
             file=audio_file,
             response_format="text"
         )
