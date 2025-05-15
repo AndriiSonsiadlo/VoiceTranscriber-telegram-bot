@@ -1,6 +1,5 @@
 import os
 import tempfile
-from typing import Any
 
 from dotenv import load_dotenv
 from groq import Groq
@@ -31,17 +30,19 @@ async def create_telegram_app() -> TelegramApp:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command `/start` is issued."""
+    if not update.effective_user or not update.message:
+        return
+
     print(f"Received start command from user: {update.effective_user.id}")
     user_name = update.effective_user.first_name
-    if update.message:
-        try:
-            await update.message.reply_text(
-                f"Hi, {user_name}! I'm a Voice Transcription Bot.\n\n"
-                "I'll transcribe voice messages and provide you with both the transcription and a summary!"
-            )
-            print(f"Sent start message to user: {update.effective_user.id}")
-        except Exception as e:
-            print(f"Error sending start message to user {update.effective_user.id}: {str(e)}")
+    try:
+        await update.message.reply_text(
+            f"Hi, {user_name}! I'm a Voice Transcription Bot.\n\n"
+            "I'll transcribe voice messages and provide you with both the transcription and a summary!"
+        )
+        print(f"Sent start message to user: {update.effective_user.id}")
+    except Exception as e:
+        print(f"Error sending start message to user {update.effective_user.id}: {str(e)}")
 
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -60,13 +61,32 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         transcription = await transcribe_audio(temp_path)
         summary = await generate_summary(transcription.text)
 
-        await status_message.edit_text(
-            "📝 *Transcription:*\n"
-            f"{transcription.text}\n\n"
-            "📌 *Summary:*\n"
-            f"{summary}",
-            parse_mode='Markdown'
-        )
+        if len(transcription.text) > 3000:  # Leave room for summary and formatting
+            await status_message.edit_text("📝 *Transcription (Part 1):*", parse_mode='Markdown')
+
+            chunk_size = 4000
+            transcription_chunks = [transcription.text[i:i + chunk_size]
+                                    for i in range(0, len(transcription.text), chunk_size)]
+
+            for i, chunk in enumerate(transcription_chunks, 1):
+                await update.message.reply_text(
+                    f"*Transcription (Part {i}):*\n{chunk}",
+                    parse_mode='Markdown'
+                )
+
+            await update.message.reply_text(
+                "📌 *Summary:*\n"
+                f"{summary}",
+                parse_mode='Markdown'
+            )
+        else:
+            await status_message.edit_text(
+                "📝 *Transcription:*\n"
+                f"{transcription.text}\n\n"
+                "📌 *Summary:*\n"
+                f"{summary}",
+                parse_mode='Markdown'
+            )
 
         os.unlink(temp_path)
 
@@ -85,7 +105,7 @@ async def transcribe_audio(file_path: str) -> Transcription:
     return completion
 
 
-async def generate_summary(text: str) -> Any:
+async def generate_summary(text: str) -> str | None:
     """Generate a summary using LLama 3 via Groq API."""
     completion = groq_client.chat.completions.create(
         model="llama3-70b-8192",
@@ -94,10 +114,12 @@ async def generate_summary(text: str) -> Any:
                 content="Generate a concise summary of the following text:", role="system"
             ),
             ChatCompletionUserMessageParam(content=text, role="user")
-        ]
+        ],
+        max_completion_tokens=32768
     )
     return completion.choices[0].message.content
 
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Log Errors caused by Updates."""
     print(f"Update {update} caused error {context.error}")
