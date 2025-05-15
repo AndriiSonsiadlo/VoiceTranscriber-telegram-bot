@@ -2,7 +2,6 @@ import asyncio
 
 from dotenv import load_dotenv
 from telegram import Update
-from telegram.ext import ContextTypes
 
 from bot import create_telegram_app
 
@@ -13,7 +12,6 @@ async def main() -> None:
     """Start the bot."""
     application = await create_telegram_app()
     print("Starting bot...")
-    application.add_error_handler(error_handler)
 
     try:
         await application.initialize()
@@ -39,11 +37,6 @@ async def main() -> None:
             await application.updater.stop()
         await application.stop()
         print("Bot stopped.")
-
-
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Log Errors caused by Updates."""
-    print(f"Update {update} caused error {context.error}")
 
 
 if __name__ == "__main__":
