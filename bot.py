@@ -3,11 +3,12 @@ import tempfile
 
 from dotenv import load_dotenv
 from groq import Groq
-from groq.types.audio import Transcription
 from groq.types.chat import ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam
 from telegram import Update
 from telegram.ext import Application as TelegramApp
 from telegram.ext import CommandHandler, ContextTypes, MessageHandler, filters
+
+from main import AUTHORIZED_USER_IDS
 
 load_dotenv()
 
@@ -47,10 +48,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle voice messages and voice notes."""
-    if not update.message or not update.message.voice:
+    if not update.message or not update.message.voice or not update.effective_user:
         return
 
     try:
+        if update.effective_user.id not in AUTHORIZED_USER_IDS:
+            await update.message.reply_text("⛔ Sorry, you are not authorized to use this bot. Contact @andrii_sonsiadlo.")
+            return
+
         status_message = await update.message.reply_text("🎵 Processing your voice note...")
 
         voice_file = await update.message.voice.get_file()
@@ -59,14 +64,14 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             temp_path = temp_file.name
 
         transcription = await transcribe_audio(temp_path)
-        summary = await generate_summary(transcription.text)
+        summary = await generate_summary(transcription)
 
-        if len(transcription.text) > 3000:  # Leave room for summary and formatting
+        if len(transcription) > 3000:  # Leave room for summary and formatting
             await status_message.edit_text("📝 *Transcription (Part 1):*", parse_mode='Markdown')
 
             chunk_size = 4000
-            transcription_chunks = [transcription.text[i:i + chunk_size]
-                                    for i in range(0, len(transcription.text), chunk_size)]
+            transcription_chunks = [transcription[i:i + chunk_size]
+                                    for i in range(0, len(transcription), chunk_size)]
 
             for i, chunk in enumerate(transcription_chunks, 1):
                 await update.message.reply_text(
@@ -82,7 +87,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         else:
             await status_message.edit_text(
                 "📝 *Transcription:*\n"
-                f"{transcription.text}\n\n"
+                f"{transcription}\n\n"
                 "📌 *Summary:*\n"
                 f"{summary}",
                 parse_mode='Markdown'
@@ -94,7 +99,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await update.message.reply_text(f"❌ Sorry, an error occurred: {str(e)}")
 
 
-async def transcribe_audio(file_path: str) -> Transcription:
+async def transcribe_audio(file_path: str) -> str:
     """Transcribe audio using Whisper via Groq API."""
     with open(file_path, "rb") as audio_file:
         completion = groq_client.audio.transcriptions.create(
@@ -102,7 +107,7 @@ async def transcribe_audio(file_path: str) -> Transcription:
             file=audio_file,
             response_format="text"
         )
-    return completion
+    return completion.text.strip()
 
 
 async def generate_summary(text: str) -> str | None:
