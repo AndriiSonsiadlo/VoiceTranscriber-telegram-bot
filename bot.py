@@ -64,39 +64,45 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             await voice_file.download_to_drive(temp_file.name)
             temp_path = temp_file.name
 
-        transcription = await transcribe_audio(temp_path)
-        summary = await generate_summary(transcription)
+        try:
+            await status_message.edit_text("🔄 Transcribing audio...")
+            transcription = await transcribe_audio(temp_path)
 
-        if len(transcription) > 3000:  # Leave room for summary and formatting
-            await status_message.edit_text("📝 *Transcription (Part 1):*", parse_mode='Markdown')
+            await status_message.edit_text("🔄 Generating summary...")
+            summary = await generate_summary(transcription)
 
-            chunk_size = 4000
-            transcription_chunks = [transcription[i:i + chunk_size]
-                                    for i in range(0, len(transcription), chunk_size)]
+            if len(transcription) > 3000:
+                chunk_size = 4000
+                transcription_chunks = [transcription[i:i + chunk_size]
+                                        for i in range(0, len(transcription), chunk_size)]
 
-            for i, chunk in enumerate(transcription_chunks, 1):
+                await status_message.edit_text("📝 *Transcription (Part 1):*", parse_mode='Markdown')
+
+                for i, chunk in enumerate(transcription_chunks, 1):
+                    await update.message.reply_text(
+                        f"*Transcription (Part {i}):*\n{chunk}",
+                        parse_mode='Markdown'
+                    )
+
                 await update.message.reply_text(
-                    f"*Transcription (Part {i}):*\n{chunk}",
+                    "📌 *Summary:*\n"
+                    f"{summary}",
+                    parse_mode='Markdown'
+                )
+            else:
+                await status_message.edit_text(
+                    "📝 *Transcription:*\n"
+                    f"{transcription}\n\n"
+                    "📌 *Summary:*\n"
+                    f"{summary}",
                     parse_mode='Markdown'
                 )
 
-            await update.message.reply_text(
-                "📌 *Summary:*\n"
-                f"{summary}",
-                parse_mode='Markdown'
-            )
-        else:
-            await status_message.edit_text(
-                "📝 *Transcription:*\n"
-                f"{transcription}\n\n"
-                "📌 *Summary:*\n"
-                f"{summary}",
-                parse_mode='Markdown'
-            )
-
-        os.unlink(temp_path)
+        finally:
+            os.unlink(temp_path)
 
     except Exception as e:
+        print(f"Error in handle_voice: {str(e)}")
         await update.message.reply_text(f"❌ Sorry, an error occurred: {str(e)}")
 
 
@@ -114,6 +120,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
         status_message = await update.message.reply_text("📝 Generating summary...")
         text = update.message.text
+
         if not text:
             await status_message.edit_text("❌ Sorry, no text provided.")
             return
@@ -126,18 +133,20 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         )
 
     except Exception as e:
+        print(f"Error in handle_text: {str(e)}")
         await update.message.reply_text(f"❌ Sorry, an error occurred: {str(e)}")
 
 
 async def transcribe_audio(file_path: str) -> str:
     """Transcribe audio using Whisper via Groq API."""
     with open(file_path, "rb") as audio_file:
-        completion = groq_client.audio.transcriptions.create(
-            model="whisper-large-v3-turbo",
-            file=audio_file,
-            response_format="text"
+        transcription = groq_client.audio.transcriptions.create(
+            model="whisper-large-v3",
+            file=(os.path.basename(file_path), audio_file.read()),
+            temperature=0,
+            response_format="verbose_json"
         )
-    return completion.text.strip()
+    return transcription.text.strip()
 
 
 async def generate_summary(text: str) -> str | None:

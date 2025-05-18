@@ -1,9 +1,8 @@
 import asyncio
+import os
 
 from dotenv import load_dotenv
 from telegram import Update
-
-from bot import create_telegram_app
 
 load_dotenv()
 
@@ -12,6 +11,8 @@ AUTHORIZED_USER_IDS = [6089604978]
 
 async def main() -> None:
     """Start the bot."""
+    from bot import create_telegram_app
+
     application = await create_telegram_app()
     print("Starting bot...")
 
