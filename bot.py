@@ -152,7 +152,7 @@ async def transcribe_audio(file_path: str) -> str:
 async def generate_summary(text: str) -> str | None:
     """Generate a summary using LLama 3 via Groq API."""
     completion = groq_client.chat.completions.create(
-        model="llama3-70b-8192",
+        model="llama-3.1-8b-instant",
         messages=[
             ChatCompletionSystemMessageParam(
                 content="Generate a concise summary of the following text:", role="system"
