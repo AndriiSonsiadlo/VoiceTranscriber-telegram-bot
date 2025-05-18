@@ -24,6 +24,7 @@ async def create_telegram_app() -> TelegramApp:
     )
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.add_error_handler(error_handler)
 
     return app
@@ -94,6 +95,35 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             )
 
         os.unlink(temp_path)
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ Sorry, an error occurred: {str(e)}")
+
+
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle text messages and generate summaries."""
+    if not update.effective_user or not update.message:
+        return
+
+    try:
+        if update.effective_user.id not in AUTHORIZED_USER_IDS:
+            await update.message.reply_text(
+                "⛔ Sorry, you are not authorized to use this bot. Contact @andrii_sonsiadlo."
+            )
+            return
+
+        status_message = await update.message.reply_text("📝 Generating summary...")
+        text = update.message.text
+        if not text:
+            await status_message.edit_text("❌ Sorry, no text provided.")
+            return
+
+        summary = await generate_summary(text)
+        await status_message.edit_text(
+            "📌 *Summary:*\n"
+            f"{summary}",
+            parse_mode='Markdown'
+        )
 
     except Exception as e:
         await update.message.reply_text(f"❌ Sorry, an error occurred: {str(e)}")
