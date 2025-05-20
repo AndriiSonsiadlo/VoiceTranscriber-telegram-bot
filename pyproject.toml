@@ -1,14 +1,15 @@
 [project]
-name = "voicetranscription-telegram-bot"
-version = "0.1.0"
-description = "Add your description here"
+name = "VoiceTranscription-telegram-bot"
+version = "1.0.0"
+description = """A simple Telegram bot built with Python that automatically transcribes
+voice messages and audio files into text, then generates concise summaries"""
+authors = [
+    {name = "Andrii Sonsiadlo", email = "andrii.sonsiadlo@gmail.com"},
+]
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
-    "cffi>=2.0.0",
-    "fastapi>=0.121.1",
-    "ffmpeg-python>=0.2.0",
-    "groq>=0.33.0",
+    "groq>=0.34.0",
     "python-dotenv>=1.2.1",
     "python-telegram-bot>=22.5",
 ]
@@ -16,5 +17,5 @@ dependencies = [
 [dependency-groups]
 dev = [
     "mypy>=1.18.2",
-    "ruff>=0.14.4",
+    "ruff>=0.14.5",
 ]
